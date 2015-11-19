@@ -1,0 +1,3 @@
+
+- state diagram / flowchart
+- uml diagram of structure
