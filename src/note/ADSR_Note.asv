@@ -81,15 +81,10 @@ classdef ADSR_Note < Note_Abstract
             % synthesize(bpm, Fs)
             % Synthesize the note sequence.
             %
-            % PARAMETERS:
-            %   bpm     ::  int     ::  The number of beats per minute.
-            %   Fs      ::  int     ::  The sampling frequency.
-            % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            
-            % get complex sinusoid from superclass
+            % Parameters:
+            %
+            %
             wav = obj.csin(bpm, Fs);
-            
-            % scale the sinusioud by the adsr envelope
             wav = wav .* obj.envelope( obj.getNumSamples(bpm, Fs));
         end
     end
