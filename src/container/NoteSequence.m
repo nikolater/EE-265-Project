@@ -1,27 +1,63 @@
-%% NoteSequence
-% Used to store a sequence of notes input by the user in the GUI.
 classdef NoteSequence
+%#########################################################################%
+%                           NoteSequence                                  %
+%=========================================================================%
+% Compound data type used to represent a sequence of musical notes which  %
+% are subclasses of the Note_Abstract class found in directory at         %
+% '../note' relative to the location of this file.                        %
+%                                                                         %
+% DEPENDANCIES:                                                           %
+%   Class definitions for any children of Note_Abstract whcih are valid   %
+%   musical notes to be stored by this data type.                         %
+%#########################################################################%
     
-    properties(Access = private)
+properties(Access = private)
         tempo;          % the tempo of the sequence
         samplingFreq;   % the sampling frequency to be played back
         notes;          % an array of the notes themselves
     end
     
     methods(Access = public)
-        %% GUINoteSequence()
-        % Create an instance of the GUINoteSequence class
         function obj = NoteSequence()
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % NoteSequence()
+        % Instantiate a new note sequence.
+        %
+        % PARAMETERS: (void)
+        %
+        % RETURN:
+        %   New instance of a note sequence type.
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         end
-        %% appendNote(obj, newNote)
-        % Append a note to the list of notes.
+       
         function obj = appendNote(obj, newNote)
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % appendNote(newNote)
+        % Append a new note.
+        %
+        % PARAMETERS:
+        %   newNote     ::   T < Note_Abstract  :: The note to be appended.
+        %
+        % RETURN:
+        %   The updated sequence.
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             len = length(obj.notes);
             obj.notes{len+1} = newNote;
         end
-        %% insertNote(obj, idx, newNote)
-        % Insert a note at index idx.
+        
         function obj = insertNote(obj, idx, newNote)
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % insertNote(idx, newNote)
+        % Inster a new note.
+        %
+        % PARAMETERS:
+        %   idx         ::  int     ::  The index of where the new note
+        %                               will be inserted.
+        %   newNote     ::   T < Note_Abstract  :: The note to be appended.
+        %
+        % RETURN:
+        %   The updated sequence.
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if(idx > 1 && idx <= length(obj.notes))
             obj.notes{idx+1:end+1} = obj.notes{idx:end};
             obj.notes{idx} = newNote;
@@ -36,9 +72,19 @@ classdef NoteSequence
             end
         end
         
-        %% removeNote(obj, idx)
-        % Remove the note at index idx.
+       
         function obj = removeNote(obj, idx)
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % removeNote(idx)
+        % Remove a note from the sequence.
+        %
+        % PARAMETERS:
+        %   idx         ::  int     ::  The index of where the note to be
+        %                               removed.
+        %
+        % RETURN:
+        %   The updated sequence.
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if(idx > 1 && idx + 1 <=length(obj.notes))
                 obj.notes{idx:end-1} = obj.notes{idx+1:end};
                 obj.notes = obj.note{1:end-1};
@@ -53,21 +99,36 @@ classdef NoteSequence
             end
         end
         
-        %% setTempo(tempo_in)
-        % Set the tempo of the note sequence.
         function obj = setTempo(obj, tempo_in)
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % setTempo(tempo_in)
+        % Set the tempo for the sequence to be played at.
+        %
+        % PARAMETERS:
+        %   tempo_in    :: float/int    ::  Playback temp (beats/min)
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             obj.tempo = tempo_in;
         end
         
-        %% setSamplingFreq(samplingFreq_in)
-        % Set the sampling frequence for the playback of the sequence.
         function obj = setSampleRate(obj, samplingFreq_in)
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % setSampleRate(tempo_in)
+        % Set the sampling rate that the sequence is to be played at.
+        %
+        % PARAMETERS:
+        %   samplingFreq_in ::  int    ::  Playback sampling rate.
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             obj.samplingFreq = samplingFreq_in;
         end
         
-        %% synthesize()
-        % Synthesize the sequence of notes.
         function wav = synthesize(obj)
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % synthesize()
+        % Synthesize the sequence of notes.
+        %
+        % RETURN:
+        %   The waveform of the synthesized sequence.
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             wav = [];
             for idx = 1:length(obj.notes)
                 wav = [wav, ...

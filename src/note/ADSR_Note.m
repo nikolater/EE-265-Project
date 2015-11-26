@@ -35,7 +35,7 @@ classdef ADSR_Note < Note_Abstract
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         
             % initialize superclass properties
-            obj.tpye = type_in;
+            obj.type = type_in;
             obj.tone = tone_in;
             obj.amplitude = volume_in;
             
