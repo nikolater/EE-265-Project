@@ -1,44 +1,89 @@
-%% Note (Abstract)
-% Used to represent a musical note.
 classdef Note_Abstract
+%#########################################################################%
+%                           Note_Abstract               (Abstract Class)  %
+%=========================================================================%
+% Abstract class for representing a musical note played.                  %
+%                                                                         %
+% SUBCLASS:     Tone_Note                                                 %
+%               ADSR_Note                                                 %
+%#########################################################################%
+
     properties(Access = protected)
-        type;       % the notes type
+        type;       % the type of note. ie. quarter note
         tone;       % the tone of the note
         amplitude;  % the amplitude of the waveform
     end    
     
     methods(Access = public)
-        %% getFrequency(Fs)
-        % Get the frequency of the note in samples/cycle.
+        
         function F = getFrequency(obj, Fs)
-            f = 440 * 2 ^ (obj.tone - 40)/12;
-            F = f/Fs;
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % getFrequency(Fs)
+        % Get the discrete-time frequency of the note
+        %
+        % PARAMETERS:
+        %   Fs  ::  int     ::  Sampling frequency of the playback.
+        %
+        % RETURN:
+        %   The frequency of the note in cycles/sample
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            
+            % calculate the frequency of the key
+            f = 440 * 2 ^ (obj.tone - 40)/12;                               % TODO: double check that this is the correct formula
+            F = f/Fs; % return the frequency in cycle/sample
         end
         
-        %% getNumSamples(bpm, Fs)
-        % Get the number of samples required to produce this note at Fs.
         function n = getNumSamples(obj, bpm, Fs)
-            bps = bpm/60; % beats be second
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % getNumSamples(bpm, Fs)
+        % Get the number of samples required to produce the note.
+        %
+        % PARAMETERS:
+        %   bpm     ::  int/float   ::  The number of beats per minute of
+        %                               the playback.
+        %   Fs      ::  int         ::  The sampling frequency of the
+        %                               playback.
+        % RETURN:
+        %   The number of samples needed to produce the note
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        
+            bps = bpm/60; % beats be second                                 % TODO: this method could be improved
             tWN = bps*2; % time for whole note TODO: FIX
             t = obj.type * tWN; % time of note in seconds
             n = t*Fs; % number of samples per note
         end
         
-        %% csin(bpm, Fs)
-        % Get the vanilla complex sinusoid from this note.
         function wav = csin(obj, bpm, Fs)
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % csin(bpm, Fs)
+        % Generate the complex sinusiod of the basic note from its tone and
+        % type.
+        %
+        % PARAMETERS:
+        %   bpm     ::  float/int   ::  Playback tempo (beats/minute)
+        %   Fs      ::  int         ::  Playback sampling frequency
+        %
+        % RETURN:
+        %   The complex sinusoid of the basic note.
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        
+            % get frequency and number of samples
             F = obj.getFrequency(Fs);
             N = obj.getNumSamples(bpm, Fs);
             
+            % generate complex sine wave
             x = 0:(N-1);
-            
             wav = obj.amplitude * exp(-1j*2*pi*F*x);
         end
     end
     
     methods(Abstract, Access = public)
-        %% synthesize(bpm, Fs)
-        % Create the waveform for this note.
+        % synthesize(bpm, Fs)       :: Abstract Method
+        % Synthesize the note. 
+        %
+        % PARAMETERS:
+        %   bpm     ::  int/float   :: Playback temp(beats/minutes)
+        %   Fs      ::  int         :: Playback sampling frequency.
         synthesize(obj, bpm, Fs)
     end
 end

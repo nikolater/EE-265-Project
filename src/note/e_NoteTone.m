@@ -1,8 +1,8 @@
-%% e_TONE
-% Enumerator to classify the tone of a note.
 classdef e_NoteTone < double
+% e_NoteTone is a enumerator to classify the note's tone. This is the key
+% number on a piano of the key that was pressed.
     enumeration
-        C4(28)
+        C4(28)                                                              % TODO: check that these key numbers are correct
         C4s(29)
         D4(30)
         D4s(31)

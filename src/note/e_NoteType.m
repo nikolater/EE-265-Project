@@ -1,6 +1,6 @@
-%% e_TYPE
-% enumerator to classify the type of note.
 classdef e_NoteType < double
+% e_NoteType is an enumerator used to classify the note type. ie. a quarter
+% note or a half note.
     enumeration
         sixteenth(1/16)
         eigth(1/8) 

@@ -17,13 +17,14 @@ classdef ADSR_Note < Note_Abstract
     
     methods(Access = public)
         
-        function obj = ADSR_Note(tone_in, volume_in, ...
+        function obj = ADSR_Note(type_in, tone_in, volume_in, ...
                                     A, D, S, R, As_in)
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        % ADSR_NOTE(tone_in, volume_in, A, D, S, R, As_in) 
+        % ADSR_NOTE(type_in, tone_in, volume_in, A, D, S, R, As_in) 
         % Instantiate an instance of an ADSR note.
         %
         % PARAMETERS:
+        %   type_in     ::  e_NoteType  ::  The type of note ie. quarter.
         %   tone_in     ::  e_NoteTone  ::  The tone of the note.
         %   volume_in   ::  float       ::  The amplitude of the note.
         %   A, D, S, R  ::  float       ::  Amplitude of ADSR envelope.
@@ -34,6 +35,7 @@ classdef ADSR_Note < Note_Abstract
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         
             % initialize superclass properties
+            obj.tpye = type_in;
             obj.tone = tone_in;
             obj.amplitude = volume_in;
             
@@ -77,14 +79,17 @@ classdef ADSR_Note < Note_Abstract
         end
         
         function wav = synthesize(obj, bpm, Fs)
-            % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            % synthesize(bpm, Fs)
-            % Synthesize the note sequence.
-            %
-            % PARAMETERS:
-            %   bpm     ::  int     ::  The number of beats per minute.
-            %   Fs      ::  int     ::  The sampling frequency.
-            % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % synthesize(bpm, Fs)
+        % Synthesize the note sequence.
+        %
+        % PARAMETERS:
+        %   bpm     ::  int     ::  The number of beats per minute.
+        %   Fs      ::  int     ::  The sampling frequency.
+        %
+        % RETURN:
+        %   The waveform of the synthesized note (complex).
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             
             % get complex sinusoid from superclass
             wav = obj.csin(bpm, Fs);
