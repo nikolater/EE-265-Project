@@ -103,7 +103,8 @@ classdef Transcriber
             
             % classify each note
             for idx = 1:nParts
-                obj.partNotes(idx) = round(real(40 + 12 * log2(obj.partFreq(idx)/440))); 
+                obj.partNotes(idx) ...
+                    = round(real(40 + 12 * log2(obj.partFreq(idx)/440))); 
             end
         end           
     end
