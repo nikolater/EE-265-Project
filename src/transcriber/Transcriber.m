@@ -9,9 +9,18 @@ classdef Transcriber
     
     properties
         wav;        % The waveform
+        noTrimSize; % Size of the partitions before trimming
         partWav;    % The partitioned waveform
         partFreq;   % The frequency of the partitioned waveforms
         partNotes;  % The notes of the partitions
+        
+        amplitudeAnalysisNoteIndex; % new note index determined by
+                                    % amplitude analysis
+        
+        partAMean;
+        partAStDev;
+        
+        notes;
         
         Fs; % The sampling frequency of the sequence
         
@@ -39,6 +48,7 @@ classdef Transcriber
             bps = bpm/60; % beats per second
             timeSixteenth = bps / 8;                                        % TODO: if timing signatures are added this will need to be changed
             parSize = round(timeSixteenth * obj.Fs); % size of partition
+            obj.noTrimSize = parSize;
             
             % allocate memory for partitioned waveform
             sizeWav = size(obj.wav);
@@ -51,9 +61,13 @@ classdef Transcriber
                 % grab partition
                 if(i == nRows)
                     temp = obj.wav(parSize*(i-1)+1:end);
+                                                                            hold all
+                                                                            plot(parSize*(i-1)+1:length(obj.wav),real(temp))
                 else
-                    temp = obj.wav(parSize*(i-1)+1: parSize*i );
+                    temp = obj.wav(parSize*(i-1)+1: parSize*i );            hold all
+                                                                            plot(parSize*(i-1)+1: parSize*i,real(temp))
                 end
+                
                 % copy trimmed section
                 obj.partWav{i} = temp(nTrim:end-nTrim);
             end
@@ -106,7 +120,160 @@ classdef Transcriber
                 obj.partNotes(idx) ...
                     = round(real(40 + 12 * log2(obj.partFreq(idx)/440))); 
             end
-        end           
+        end 
+        
+        function obj = analyzeAmplitude(obj)
+            nParts = length(obj.partWav);
+                       
+            % allocate cells
+            obj.partAMean = cell(1, nParts);
+            obj.partAStDev = cell(1, nParts);
+            
+            % calculate mean amplitude and standard deviation
+            for i = 1:nParts
+                amplitudes = findpeaks(real(obj.partWav{i}));
+                obj.partAMean{i} = mean(amplitudes);
+                obj.partAStDev{i} = std(amplitudes);
+            end    
+        end
+        
+        function obj = determineNoteType(obj)
+            nParts = length(obj.partWav);
+            
+            
+            % find positions where absolute value of amplitude is zero
+            [ampl, loc] = findpeaks(real(obj.wav));
+            zeroLoc = find( abs(ampl) < 0.01 );                             % Magic number here
+            contBound = ones(1, nParts - 1);
+            for i = 1:length(zeroLoc)
+                idxNewNote = loc(zeroLoc(i));
+                boundaryLocation = ...
+                    round( idxNewNote / obj.noTrimSize);
+                if(boundaryLocation ~= nParts && boundaryLocation ~= 0)
+                    contBound(boundaryLocation) = 0;
+                end
+            end
+            
+            
+            
+            
+            % check if amplitude is continous across paritions
+            % check if frequence is continous across paritions
+            % if so then it is the same note
+            for i = 1:(nParts-1)
+                
+                % check that keyNumber is continous across boundary
+                if(contBound(i))
+                    contBound(i) = obj.partNotes(i) == obj.partNotes(i+1);
+                end
+                
+                % check if both notes are tone notes
+                if(obj.partAStDev{i} < 0.01 ...
+                        && obj.partAStDev{i} < 0.01 ...
+                        && contBound(i) )
+                    meanDiff = abs(obj.partAMean{i} - obj.partAMean{i+1});
+                    minStDev = min([obj.partAStDev{i}, obj.partAStDev{i}]);
+                    if( meanDiff > minStDev )
+                        contBound(i) = 0;
+                    end
+                end
+            end
+            
+            % now contBound is '1' across boundaries which are the same
+            % note
+            numNotes = sum(contBound(:) == 0) + 1;                          % sort of magic 1
+            obj.notes = cell( numNotes, 2);
+            
+            % classify first note
+            obj.notes{1,1} = obj.partNotes(1);
+            obj.notes{1,2} = 1/16;
+            
+            idx = 1;
+            for i = 1:nParts
+                if(contBound(i) == 0) % if boundary is not continous
+                    hold all
+                    plot([i*obj.noTrimSize,i*obj.noTrimSize] ,[-1,1], 'k--') 
+                    idx = idx + 1;
+                    obj.notes{idx, 1} = obj.partNotes(i+1);                 % Magic 1
+                    obj.notes{idx, 2} = 1/16;
+                else 
+                    obj.notes{idx, 2} = obj.notes{idx,2} + 1/16;
+                end
+            end
+            
+        end
+        
+        function obj = determineNotes(obj)
+            prevIndex = 0;
+            partIndex = 1;
+            for i = 1:length(obj.amplitudeAnalysisNoteIndex)
+                
+                partIndex = round(obj.amplitudeAnalysisNoteIndex(i)/obj.noTrimSize);
+                
+                obj.notes(i,1) = obj.partNotes(partIndex);
+                obj.notes(i,2) = (1/16) * (partIndex - prevIndex);
+                prevIndex = partIndex;
+            end
+            for i = length(obj.notes):-1:1
+                if(obj.notes(i,2) ==0)
+                    obj.notes(i,:) = [];
+                end
+            end
+            
+        end
+    end
+    methods(Access = public)
+        function obj = amplitudeAnalysis(obj)
+            APX_ZERO = 0.0012;
+            DW2_MIN = 0.3;
+            
+            diffKernel = [-1, 0, 1];
+            [amplitude, loc] = findpeaks(abs(real(obj.wav)));
+            
+            newNoteIndex = [];
+            temp = find(amplitude < APX_ZERO );
+            for i = 1:length(temp)
+                newNoteIndex = [newNoteIndex, loc(temp(i))];
+            end
+            
+            % first diff convolution
+            dW1 = abs(conv(amplitude, 2*diffKernel, 'same'));
+            dW2 = abs(conv(dW1, 2*diffKernel, 'same'));
+            
+            temp = find(dW2 > DW2_MIN);
+            
+            for i = 1:length(temp)
+                newNoteIndex = [newNoteIndex, loc(temp(i))];
+            end
+            
+            % remove copies
+            COPY_SIZE = 400;   % about 400 looks best
+            
+            newNoteIndex = sort(newNoteIndex);
+            
+            while(newNoteIndex(1) < COPY_SIZE)
+                 newNoteIndex(1) = [];
+            end
+            
+            for i = length(newNoteIndex):-1:2
+                if(abs(newNoteIndex(i) - newNoteIndex(i-1)  ) < COPY_SIZE)
+                    newNoteIndex(i) = [];
+                end
+            end
+            
+            plot(real(obj.wav));
+            
+            for i = 1:length(newNoteIndex)
+                hold all
+                plot( [newNoteIndex(i), newNoteIndex(i)], [-1,1], 'r--');
+            end
+            
+           % subplot(2,1,2)
+           % plot(dW2);
+           
+            obj.amplitudeAnalysisNoteIndex = newNoteIndex;          
+            
+        end
     end
     
     methods(Access = public)
@@ -139,9 +306,13 @@ classdef Transcriber
         % RETURN:
         %   Updated Transcriber object.
         %------------------------------------------------------------------
+            subplot(2,1,1) 
             obj = obj.partitionWaveform(bpm);
             obj = obj.analyzeFrequency();
             obj = obj.classifyNotes();
+            subplot(2,1,2)
+            obj = obj.amplitudeAnalysis();
+            obj = obj.determineNotes();
         end
     end
 end

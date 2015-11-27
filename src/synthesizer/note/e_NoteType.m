@@ -3,7 +3,7 @@ classdef e_NoteType < double
 % note or a half note.
     enumeration
         sixteenth(1/16)
-        eigth(1/8) 
+        eighth(1/8) 
         threeSixteenth(3/16)
         quarter(1/4)
         half(1/2)

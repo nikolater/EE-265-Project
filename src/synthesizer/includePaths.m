@@ -1,2 +1,0 @@
-addpath('container')
-addpath('note')
