@@ -29,8 +29,10 @@ classdef Note_Abstract
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             
             % calculate the frequency of the key
-            f = 440 * 2 ^ (obj.tone - 40)/12;                               % TODO: double check that this is the correct formula
+            f = (440 * 2 ^ ((obj.tone - 40)/12));                               % TODO: double check that this is the correct formula 
+            
             F = f/Fs; % return the frequency in cycle/sample
+
         end
         
         function n = getNumSamples(obj, bpm, Fs)
@@ -73,7 +75,7 @@ classdef Note_Abstract
             
             % generate complex sine wave
             x = 0:(N-1);
-            wav = obj.amplitude * exp(-1j*2*pi*F*x);
+            wav = obj.amplitude * exp(-1j*2*pi*F*x);                        % TODO : should this be negative?
         end
     end
     
