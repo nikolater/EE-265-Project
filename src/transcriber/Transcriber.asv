@@ -117,10 +117,7 @@ classdef Transcriber
         % PARAMETERS:
         %   wav_in  ::  float   ::  The input waveform.
         %   Fs_in   ::  float   ::  The sampling frequency.
-        %   tSignature_in   ::  ??? :: The timing signature.    
-        %
-        % RETURN:
-        %   A new instance of the Transcriber class.
+        %   tSignature_in   ::  ??? :: The timing s
         %------------------------------------------------------------------
             obj.wav = wav_in;
             obj.Fs = Fs_in;
@@ -128,16 +125,6 @@ classdef Transcriber
         end
         
         function obj = transcribe(obj, bpm)
-        %------------------------------------------------------------------
-        % transcribe(bpm)
-        % Transcribe the given waveform.
-        %
-        % PARAMETERS:
-        %   bpm     ::  int/float   ::  The number of beats per minute.
-        %
-        % RETURN:
-        %   Updated Transcriber object.
-        %------------------------------------------------------------------
             obj = obj.partitionWaveform(bpm);
             obj = obj.analyzeFrequency();
             obj = obj.classifyNotes();
