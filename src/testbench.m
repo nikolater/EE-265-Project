@@ -46,6 +46,9 @@ for i = 1:upperBound
     end
 end
 
+soundsc(real(wav), 44100);
+
+
 if(length(t.notes) == 10)
     correct_number_of_notes = 'true'
 end
