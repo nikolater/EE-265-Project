@@ -37,16 +37,16 @@ correctType = 0;
 upperBound = min([length(t.notes),length(noteTone)]);
 
 for i = 1:upperBound
-    if(t.notes(i,1) == noteTone(i))
+    if(t.notes{1,i} == noteTone(i))
         correctTones = correctTones + 1;
     end
     
-    if(t.notes(i,2) == noteType(i))
+    if(t.notes{2,i} == noteType(i))
         correctType = correctType + 1;
     end
 end
 
-soundsc(real(wav), 44100);
+%soundsc(real(wav), 44100);
 
 
 if(length(t.notes) == 10)

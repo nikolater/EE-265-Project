@@ -200,24 +200,22 @@ classdef Transcriber
             
 			% classify the detected notes
 			prevIdx = 0;
-            noteIdx = 1;
 			for i = 1:length(newNoteIndex);
 				currIdx = round(newNoteIndex(i)/obj.noTrimSize);
 				
 				noteLength =  currIdx - prevIdx;
 				if(noteLength ~= 0)
-					obj.notes{1,noteIdx} = obj.partNotes(currIdx);
-					obj.notes{2,noteIdx} = noteLength * (1/16);
-                    noteIdx = noteIdx + 1;
+					obj.notes{1,i} = obj.partNotes(currIdx);
+					obj.notes{2,i} = noteLength * (1/16);
 				end
 				prevIdx = currIdx;
             end
 			
             % show the notes that were classified
             plot(real(obj.wav));
-            wavIdx = 1;
-            for i = 1:length(obj.notes)
-                wavIdx = wavIdx + 16 * obj.notes{2,i} * obj.noTrimSize;
+            wavIdx = 0;
+            for i = 1:length(obj.notes)notes
+                wavIdx = wavIdx + obj.{2,1} * obj.noTrimSize;
                 hold all
                 plot([wavIdx, wavIdx], [-1,1], 'r--');
             end
