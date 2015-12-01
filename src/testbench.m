@@ -12,7 +12,7 @@ clear('t', 'wav', 'sequence');
 % generate 10 random notes
 sequence = NoteSequence();
 for i = 1:10
-    noteType(i) = possibleType(ceil(6 * rand(1)));
+    noteType(i) = possibleType(ceil(6 * rand(1))); %#ok<*SAGROW>
     noteTone(i) = 28 + round(23*rand(1));
     amplitude = possibleAmplitude(ceil(9*rand(1)));
     if(rand(1) > 0.5)

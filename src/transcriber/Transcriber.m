@@ -61,13 +61,9 @@ classdef Transcriber
                 % grab partition
                 if(i == nRows)
                     temp = obj.wav(parSize*(i-1)+1:end);
-                                                                            hold all
-                                                                            plot(parSize*(i-1)+1:length(obj.wav),real(temp))
                 else
-                    temp = obj.wav(parSize*(i-1)+1: parSize*i );            hold all
-                                                                            plot(parSize*(i-1)+1: parSize*i,real(temp))
+                    temp = obj.wav(parSize*(i-1)+1: parSize*i );            
                 end
-                
                 % copy trimmed section
                 obj.partWav{i} = temp(nTrim:end-nTrim);
             end
@@ -193,40 +189,94 @@ classdef Transcriber
         %------------------------------------------------------------------
 			nParts = length(obj.partWav); % number of partitions in waveform decomp
 			
-			newNoteIndex = [];
+			newNoteIndex = []; %#ok<*NASGU>
 			newNoteIndexesAmplitude = [];
+            
 			% take note of anywhere where there is a transition in frequency
-			for i = 1:nParts-1
+            
+            
+            
+            % ---------- Take note of transitions in frequency --------
+            % Loop through the paritioned waveforms and see where fruency
+            % changes
+            newFreqIndex = [];
+            for i = 1:nParts-1
 				if(obj.partNotes(i) ~= obj.partNotes(i+1))
 					% new note detected!
-					newNoteIndexesAmplitude = [newNoteIndexesAmplitude, i * obj.noTrimSize];
+					newFreqIndex = [newFreqIndex, i * obj.noTrimSize];
 				end
             end
-            newNoteIndexesAmplitude = [newNoteIndexesAmplitude, nParts*obj.noTrimSize];
-			
-			% get new note indecies detected from amplitude analysis
-			
-            newNoteIndexesAmplitude = [newNoteIndexesAmplitude, obj.note_amplitudeAnalysis()];
-            newNoteIndexesCorrelation = obj.amplitudeCorrelation();
+            % Make sure to catch the last note. This is just a convinient
+            % place to put it.
+            newFreqIndex = [newFreqIndex, nParts*obj.noTrimSize]; 
             
-            t1 = unique(round((newNoteIndexesAmplitude / obj.noTrimSize)));
-            if(length(t1) < length(newNoteIndexesCorrelation))
-                newNoteIndex = [newNoteIndex, newNoteIndexesAmplitude];
-            else
-                newNoteIndex = [newNoteIndex, newNoteIndexesCorrelation];
+            % ------------- Method 1 -------------
+            % Determine note lengths based on zero amplitude and diff
+            % convolution.
+            newNoteIndex_m1 = [newFreqIndex, obj.note_amplitudeAnalysis()];
+			
+            % ------------- Method 2 -------------
+            % Determine note length based on correlation between paritioned
+            % wave chunks.
+            newNoteIndex_m2 = [newFreqIndex, obj.amplitudeCorrelation()];
+			
+			% Deterermine note placement
+            noteJointIndex_m1 = unique(round(newNoteIndex_m1/obj.noTrimSize));
+            noteJointIndex_m2 = unique(round(newNoteIndex_m2/obj.noTrimSize));
+            noteFreqJoint = unique(round(newFreqIndex/obj.noTrimSize));
+            
+            % Sort chunk joins
+			noteJointIndex_m1 = sort(noteJointIndex_m1);
+            noteJointIndex_m2 = sort(noteJointIndex_m2);
+            
+            % Plot a comparison of the methods
+            figure
+            subplot(3,1,1)
+            [y,x] = findpeaks(real(obj.wav));
+            plot(x,y);
+            title('Method 1: Amplitude Analysis')
+            hold all
+            for i = 1:length(noteJointIndex_m1)
+                x = noteJointIndex_m1(i) * obj.noTrimSize;
+                plot([x, x], [0, 1], 'r--')
+            end
+            ylim([0, 1]);
+            
+            subplot(3,1,2)
+            for i = 1:length(obj.partWav)
+                y = real(obj.partWav{i,:});
+                x = 1+obj.noTrimSize*(i-1):obj.noTrimSize*(i-1)+length(y); 
+                hold all
+                plot(x,y);
+            end
+            title('Method 2: Waveform  Chunk Correlation')
+            hold all
+            for i = 1:length(noteJointIndex_m2)
+                x = noteJointIndex_m2(i) * obj.noTrimSize;
+                plot([x, x], [-1, 1], 'r--')
             end
             
-            %newNoteIndex = [newNoteIndex, obj.note_amplitudeAnalysis()];
-			%newNoteIndex = [newNoteIndex, obj.amplitudeCorrelation()];              % SWAP HERE
-            % sort notes before classification
+            % Take joints where methods agree plus changes in frequency
+            comb = sort([noteJointIndex_m1, noteJointIndex_m2]);
+            [~,loc] = find(diff(comb) == 0);
+            newNoteIndex = unique([comb(loc), noteFreqJoint]);
+            
             newNoteIndex = sort(newNoteIndex);
+            
+            subplot(3,1,3)
+            plot(real(obj.wav));
+            title('Agreeable Note Joints')
+            hold all
+            for i = 1:length(newNoteIndex)
+                x = newNoteIndex(i) * obj.noTrimSize;
+                plot([x, x], [-1, 1], 'r--')
+            end
             
 			% classify the detected notes
 			prevIdx = 0;
             noteIdx = 1;
 			for i = 1:length(newNoteIndex);
-				currIdx = round(newNoteIndex(i)/obj.noTrimSize);
-				
+				currIdx = newNoteIndex(i);
 				noteLength =  currIdx - prevIdx;
 				if(noteLength ~= 0)
 					obj.notes{1,noteIdx} = obj.partNotes(currIdx);
@@ -234,15 +284,6 @@ classdef Transcriber
                     noteIdx = noteIdx + 1;
 				end
 				prevIdx = currIdx;
-            end
-			
-            % show the notes that were classified
-            plot(real(obj.wav));
-            wavIdx = 1;
-            for i = 1:length(obj.notes)
-                wavIdx = wavIdx + 16 * obj.notes{2,i} * obj.noTrimSize;
-                hold all
-                plot([wavIdx, wavIdx], [-1,1], 'r--');
             end
 		end
     end
@@ -267,66 +308,79 @@ classdef Transcriber
         end
         
         function [newNoteIdx] = amplitudeCorrelation(obj)
-            nSamples = 5;
-            notConverged = 1;
+        %------------------------------------------------------------------
+        % amplitudeCorrelation()
+        % Calculate the correlation between joints to determine note
+        % indexes
+        %
+        % PARAMETERS:
+        %       n/a
+        %
+        % PRECONDITION:
+        %   The wave must be partitioned before this function can be called
+        %
+        % RETURN:
+        %   A vector of the newNoteIndexes. The method does not change any
+        %   attribute of the Trascriber class.
+        %------------------------------------------------------------------
+        
+            jointCorr = [];     % vector to house joint correlations 
+            plotProcess = 0;    % flag for whether or not to plot the process
             
-            prevNewNoteIdx = [];
-            prev2NewNoteIdx = [];
-            
-            plotProgress = 0;
-            
-            while(notConverged)
-                nSamples = nSamples*2;
-                jointCorr = [];
-                for i = 1:length(obj.partWav)-1
-                    currTemp = (obj.partWav{i});
-                    nextTemp = (obj.partWav{i+1});
-
-                    maxSampleIdx = min(length(currTemp), length(nextTemp));
-                    sampleSpacing = floor(maxSampleIdx/nSamples);
-
-                    currSample = currTemp(1:floor(sampleSpacing):maxSampleIdx);
-                    nextSample = nextTemp(1:floor(sampleSpacing):maxSampleIdx);
-
-                    jointCorr = [jointCorr corr(currSample', nextSample', 'rows', 'pairwise')];
-                end
-
-                % calculate standard deviation
-                stdCorr = std(jointCorr);
-                if(plotProgress)                                                                                        
-                                                                                                        clf('reset')
-                end
-                newNoteIdx = [find(abs(jointCorr) < stdCorr), length(jointCorr)+1];
-                if(plotProgress)                                                                                        
-                                                                                                        subplot(2,1,1)
-                                                                                                        plot(real(obj.wav));
-                end
-                temp = [];
-                for i = 1:length(newNoteIdx)
-                    x = (newNoteIdx(i)) * obj.noTrimSize; 
-                    temp = [temp, x];
-                    if(plotProgress)
-                                                                                                        hold all
-                                                                                                        plot([x, x], [-1,1], 'r--');
-                    end
-                end
-                if(plotProgress) 
-                                                                                                        subplot(2,1,2)
-                                                                                                        plot([0, length(jointCorr)], [stdCorr, stdCorr], 'r-');
-                                                                                                        hold all
-                                                                                                        stem(abs(jointCorr));
-                end
-
-                newNoteIdx = temp;
+            % calcualte the correlation between all partitioned waveforms
+            for i = 1:length(obj.partWav)-1
+                currTemp = (obj.partWav{i});    % current partition
+                nextTemp = (obj.partWav{i+1});  % next parition
                 
-                if(isequal(newNoteIdx, prevNewNoteIdx)...
-                    && isequal(newNoteIdx, prev2NewNoteIdx))
-                    notConverged = 0;
-                else
-                    prev2NewNoteIdx = prevNewNoteIdx;
-                    prevNewNoteIdx = newNoteIdx;
-                end
+                % max sample index of the two paritions
+                maxSampleIdx = min(length(currTemp), length(nextTemp));
+                
+                % get the samples
+                currSample = currTemp(1:maxSampleIdx);
+                nextSample = nextTemp(1:maxSampleIdx);
+                
+                % calculate their correlation
+                jointCorr = [jointCorr corr(currSample', nextSample', 'rows', 'pairwise')]; %#ok<*AGROW>
             end
+            
+             % calculate standard deviation of correlation for data set
+             stdCorr = std(jointCorr);
+             
+             if(plotProcess)
+                figure
+             end
+             
+             % new notes are joints where correlation is > std
+             % Note: This method works because the outlier skew the
+             % standard deviation. This skewed standard deviation can
+             % then be used to find outliers.
+             newNoteIdx = [find(abs(jointCorr) < stdCorr), length(jointCorr)+1];
+             
+             if(plotProcess)
+                 subplot(2,1,1) %#ok<*UNRCH>
+                 plot(real(obj.wav));
+             end
+             
+             temp = [];
+             for i = 1:length(newNoteIdx)
+                 x = (newNoteIdx(i)) * obj.noTrimSize;
+                 temp = [temp, x];
+                 
+                 if(plotProcess)
+                     hold all
+                     plot([x, x], [-1,1], 'r--');
+                 end
+             end
+             
+             if(plotProcess)
+                 subplot(2,1,2)
+                 plot([0, length(jointCorr)], [stdCorr, stdCorr], 'r-');
+                 hold all
+                 stem(abs(jointCorr));
+             end
+             
+             newNoteIdx = temp;
+                
         end
         
         function obj = transcribe(obj, bpm)
@@ -340,13 +394,12 @@ classdef Transcriber
         % RETURN:
         %   Updated Transcriber object.
         %------------------------------------------------------------------
-            subplot(3,1,1) 
+            
             obj = obj.partitionWaveform(bpm);
             obj = obj.analyzeFrequency();
             obj = obj.classifyNoteTones();
-            subplot(3,1,2)
             obj = obj.classifyNotes();
-            subplot(3,1,3)
+            figure
             noteTones = [];
             for i = 1:length(obj.notes)
                 noteTones = [noteTones, obj.notes{1,i}];
