@@ -25,8 +25,8 @@ for i = 1:10
 end
 sequence = sequence.setSampleRate(44100);
 sequence = sequence.setTempo(100);
-tremolo_effect = TremoloEffect(500, 0.8);
-sequence = sequence.addEffect(tremolo_effect);
+%tremolo_effect = TremoloEffect(500, 0.8);
+%sequence = sequence.addEffect(tremolo_effect);
 wav = sequence.synthesize();
 %stem(wav)
 
