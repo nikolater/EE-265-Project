@@ -25,6 +25,7 @@ for i = 1:10
 end
 sequence = sequence.setSampleRate(44100);
 sequence = sequence.setTempo(100);
+sequence = sequence.addTremolo(5000* rand(1), rand(1));
 wav = sequence.synthesize();
 %stem(wav)
 
@@ -46,15 +47,8 @@ for i = 1:upperBound
     end
 end
 
-%soundsc(real(wav), 44100);
+soundsc(real(wav), 44100);
 
-
-if(length(t.notes) == 10)
-    correct_number_of_notes = 'true'
-end
-
-correct_tones = correctTones
-correct_types = correctType
 
 
 

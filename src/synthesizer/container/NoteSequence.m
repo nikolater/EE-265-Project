@@ -15,6 +15,11 @@ properties(Access = private)
         tempo;          % the tempo of the sequence
         samplingFreq;   % the sampling frequency to be played back
         notes;          % an array of the notes themselves
+        effects;        % the effect applied to the sequence when 
+                        %   the sequence is synthesized
+                        
+        tremolo_fc;
+        tremolo_alpha;
     end
     
     methods(Access = public)
@@ -28,6 +33,7 @@ properties(Access = private)
         % RETURN:
         %   New instance of a note sequence type.
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            obj.effects = [];
         end
        
         function obj = appendNote(obj, newNote)
@@ -99,6 +105,22 @@ properties(Access = private)
             end
         end
         
+        function obj = addTremolo(obj, fc, alpha)
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        % addEffect(e_SequenceEffect)
+        % Add a new effect to the seqeunce.
+        %
+        % PARAMETERS:   
+        %   seqeunceEffect  ::  e_SequenceEffect    ::  The new effect
+        %
+        % RETURN:
+        %   The updated object.
+        % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            obj.effects = [obj.effects, e_SequenceEffect.TREMOLO];
+            obj.tremolo_alpha = alpha;
+            obj.tremolo_fc = fc;
+        end
+        
         function obj = setTempo(obj, tempo_in)
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         % setTempo(tempo_in)
@@ -133,6 +155,17 @@ properties(Access = private)
             for idx = 1:length(obj.notes)
                 wav = [wav, ...
                        obj.notes{idx}.synthesize(obj.tempo, obj.samplingFreq)];
+            end
+            
+            for i = 1:length(obj.effects)
+                switch obj.effects(i)
+                    case e_SequenceEffect.TREMOLO
+                        wav = filter_tremolo(wav, obj.samplingFreq, obj.tremolo_fc, obj.tremolo_alpha);
+                    case e_SequenceEffect.ECHO
+                        wav = filter_echo(wav);
+                    case e_SequenceEffect.REVERB
+                        wav = filter_reverb(wav);
+                end
             end
         end
     end

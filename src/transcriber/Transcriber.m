@@ -139,17 +139,17 @@ classdef Transcriber
     end
     
     methods(Access = public)
-        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+       
+		
+		function newNoteIndex = note_amplitudeAnalysis(obj)
+        %------------------------------------------------------------------
 		% note_amplitudeAnalysis()
 		% Analyze the amplitude of the waveform to determine note positions
 		%
 		% PARAMETERS:
 		%		n/a
 		%
-		%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-		
-		function newNoteIndex = note_amplitudeAnalysis(obj)
-            
+		%------------------------------------------------------------------  
 			APX_ZERO = 0.0012; 	% Threshold for zero-amplitude
             DW2_MIN = 0.3;		% Threshold for edges after second convolution
             
@@ -177,24 +177,47 @@ classdef Transcriber
             for i = 1:length(temp)
                 newNoteIndex = [newNoteIndex, loc(temp(i))];
             end
+            
         end
 		
 		function obj = classifyNotes(obj)
+        %------------------------------------------------------------------
+        % classifyNotes()
+        % Classify the notes in the waveform.
+        %
+        % PARAMETERS:
+        %       n/a
+        %
+        % RETURN:
+        %   The updated object who's notes have been classified.
+        %------------------------------------------------------------------
 			nParts = length(obj.partWav); % number of partitions in waveform decomp
 			
 			newNoteIndex = [];
-			
+			newNoteIndexesAmplitude = [];
 			% take note of anywhere where there is a transition in frequency
 			for i = 1:nParts-1
 				if(obj.partNotes(i) ~= obj.partNotes(i+1))
 					% new note detected!
-					newNoteIndex = [newNoteIndex, i * obj.noTrimSize];
+					newNoteIndexesAmplitude = [newNoteIndexesAmplitude, i * obj.noTrimSize];
 				end
-			end
+            end
+            newNoteIndexesAmplitude = [newNoteIndexesAmplitude, nParts*obj.noTrimSize];
 			
 			% get new note indecies detected from amplitude analysis
-			newNoteIndex = [newNoteIndex, obj.note_amplitudeAnalysis()];
 			
+            newNoteIndexesAmplitude = [newNoteIndexesAmplitude, obj.note_amplitudeAnalysis()];
+            newNoteIndexesCorrelation = obj.amplitudeCorrelation();
+            
+            t1 = unique(round((newNoteIndexesAmplitude / obj.noTrimSize)));
+            if(length(t1) < length(newNoteIndexesCorrelation))
+                newNoteIndex = [newNoteIndex, newNoteIndexesAmplitude];
+            else
+                newNoteIndex = [newNoteIndex, newNoteIndexesCorrelation];
+            end
+            
+            %newNoteIndex = [newNoteIndex, obj.note_amplitudeAnalysis()];
+			%newNoteIndex = [newNoteIndex, obj.amplitudeCorrelation()];              % SWAP HERE
             % sort notes before classification
             newNoteIndex = sort(newNoteIndex);
             
@@ -243,6 +266,69 @@ classdef Transcriber
             obj.signature = tSignature_in;
         end
         
+        function [newNoteIdx] = amplitudeCorrelation(obj)
+            nSamples = 5;
+            notConverged = 1;
+            
+            prevNewNoteIdx = [];
+            prev2NewNoteIdx = [];
+            
+            plotProgress = 0;
+            
+            while(notConverged)
+                nSamples = nSamples*2;
+                jointCorr = [];
+                for i = 1:length(obj.partWav)-1
+                    currTemp = (obj.partWav{i});
+                    nextTemp = (obj.partWav{i+1});
+
+                    maxSampleIdx = min(length(currTemp), length(nextTemp));
+                    sampleSpacing = floor(maxSampleIdx/nSamples);
+
+                    currSample = currTemp(1:floor(sampleSpacing):maxSampleIdx);
+                    nextSample = nextTemp(1:floor(sampleSpacing):maxSampleIdx);
+
+                    jointCorr = [jointCorr corr(currSample', nextSample', 'rows', 'pairwise')];
+                end
+
+                % calculate standard deviation
+                stdCorr = std(jointCorr);
+                if(plotProgress)                                                                                        
+                                                                                                        clf('reset')
+                end
+                newNoteIdx = [find(abs(jointCorr) < stdCorr), length(jointCorr)+1];
+                if(plotProgress)                                                                                        
+                                                                                                        subplot(2,1,1)
+                                                                                                        plot(real(obj.wav));
+                end
+                temp = [];
+                for i = 1:length(newNoteIdx)
+                    x = (newNoteIdx(i)) * obj.noTrimSize; 
+                    temp = [temp, x];
+                    if(plotProgress)
+                                                                                                        hold all
+                                                                                                        plot([x, x], [-1,1], 'r--');
+                    end
+                end
+                if(plotProgress) 
+                                                                                                        subplot(2,1,2)
+                                                                                                        plot([0, length(jointCorr)], [stdCorr, stdCorr], 'r-');
+                                                                                                        hold all
+                                                                                                        stem(abs(jointCorr));
+                end
+
+                newNoteIdx = temp;
+                
+                if(isequal(newNoteIdx, prevNewNoteIdx)...
+                    && isequal(newNoteIdx, prev2NewNoteIdx))
+                    notConverged = 0;
+                else
+                    prev2NewNoteIdx = prevNewNoteIdx;
+                    prevNewNoteIdx = newNoteIdx;
+                end
+            end
+        end
+        
         function obj = transcribe(obj, bpm)
         %------------------------------------------------------------------
         % transcribe(bpm)
@@ -254,12 +340,19 @@ classdef Transcriber
         % RETURN:
         %   Updated Transcriber object.
         %------------------------------------------------------------------
-            subplot(2,1,1) 
+            subplot(3,1,1) 
             obj = obj.partitionWaveform(bpm);
             obj = obj.analyzeFrequency();
             obj = obj.classifyNoteTones();
-            subplot(2,1,2)
+            subplot(3,1,2)
             obj = obj.classifyNotes();
+            subplot(3,1,3)
+            noteTones = [];
+            for i = 1:length(obj.notes)
+                noteTones = [noteTones, obj.notes{1,i}];
+            end
+            stem(noteTones);
+            ylim([27 52]);
         end
     end
 end
