@@ -17,9 +17,6 @@ properties(Access = private)
         notes;          % an array of the notes themselves
         effects;        % the effect applied to the sequence when 
                         %   the sequence is synthesized
-                        
-        tremolo_fc;
-        tremolo_alpha;
     end
     
     methods(Access = public)
@@ -105,7 +102,7 @@ properties(Access = private)
             end
         end
         
-        function obj = addTremolo(obj, fc, alpha)
+        function obj = addEffect(obj, effect)
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         % addEffect(e_SequenceEffect)
         % Add a new effect to the seqeunce.
@@ -116,9 +113,12 @@ properties(Access = private)
         % RETURN:
         %   The updated object.
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            obj.effects = [obj.effects, e_SequenceEffect.TREMOLO];
-            obj.tremolo_alpha = alpha;
-            obj.tremolo_fc = fc;
+            len = length(obj.effects);
+            if(len == 0)
+                obj.effects{1,1} = effect;
+            else 
+                obj.effects{1, len+1} = effect;
+            end
         end
         
         function obj = setTempo(obj, tempo_in)
@@ -158,14 +158,8 @@ properties(Access = private)
             end
             
             for i = 1:length(obj.effects)
-                switch obj.effects(i)
-                    case e_SequenceEffect.TREMOLO
-                        wav = filter_tremolo(wav, obj.samplingFreq, obj.tremolo_fc, obj.tremolo_alpha);
-                    case e_SequenceEffect.ECHO
-                        wav = filter_echo(wav);
-                    case e_SequenceEffect.REVERB
-                        wav = filter_reverb(wav);
-                end
+                effect = obj.effects{1,i};
+                wav = effect.filter(wav, obj.samplingFreq);
             end
         end
     end
