@@ -25,13 +25,14 @@ for i = 1:10
 end
 sequence = sequence.setSampleRate(44100);
 sequence = sequence.setTempo(100);
-%tremolo_effect = TremoloEffect(500, 0.8);
-%sequence = sequence.addEffect(tremolo_effect);
+tremolo_effect = TremoloEffect(500, 0.8);
+sequence = sequence.addEffect(tremolo_effect);
 wav = sequence.synthesize();
 %stem(wav)
 
 t = Transcriber(wav, 44100, 1);
 t = t.transcribe(100);
+
 
 correctTones = 0;
 correctType = 0;
@@ -47,6 +48,27 @@ for i = 1:upperBound
         correctType = correctType + 1;
     end
 end
+
+figure
+subplot(2,1,1)
+stem(noteTone)
+title('Input Tones');
+ylabel('Piano Key Number');
+xlabel('Note Number');
+grid on
+grid minor
+
+subplot(2,1,2)
+tNote = [];
+for i = 1:length(t.notes)
+    tNote = [tNote, t.notes{1,i}];
+end
+stem(tNote)
+title('Transcribed Tones');
+ylabel('Piano Key Number');
+xlabel('Note Number');
+grid on
+grid minor
 
 soundsc(real(wav), 44100);
 
