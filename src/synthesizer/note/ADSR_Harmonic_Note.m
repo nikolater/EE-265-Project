@@ -1,4 +1,4 @@
-classdef ADSR_Note < Note_Abstract
+classdef ADSR_Harmonic_Note < Note_Abstract
 %%######################################################################%% 
 %                             ADSR_Note                                  %
 %========================================================================%
@@ -17,7 +17,7 @@ classdef ADSR_Note < Note_Abstract
     
     methods(Access = public)
         
-        function obj = ADSR_Note(type_in, tone_in, volume_in, ...
+        function obj = ADSR_Harmonic_Note(type_in, tone_in, volume_in, ...
                                      A, D, S, R, As_in)
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         % ADSR_NOTE(type_in, tone_in, volume_in, A, D, S, R, As_in) 
@@ -92,7 +92,17 @@ classdef ADSR_Note < Note_Abstract
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             
             % get complex sinusoid from superclass
-            wav = obj.csin(bpm, Fs);
+            F = obj.getFrequency(Fs);
+            fm = [F F*2 F*3 F*4 F*5 F*6 F*7 F*8];
+            Ah = [1.0 1.4898 0.3262 0.3010 0.2452 0.1614 0.1194 0.1645];
+            N = obj.getNumSamples(bpm, Fs);
+            n = 0:(N-1);
+            
+            for i=1:length(fm)
+                wav(1,:) = Ah(i) .* exp(-j*2*pi*fm(i)*n);
+            end
+            
+            %wav = obj.csin(bpm, Fs);
             
             % scale the sinusioud by the adsr envelope
             wav = wav .* obj.envelope( obj.getNumSamples(bpm, Fs));

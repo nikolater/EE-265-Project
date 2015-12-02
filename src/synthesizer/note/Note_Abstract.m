@@ -49,7 +49,7 @@ classdef Note_Abstract
         %   The number of samples needed to produce the note
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         
-            bps = bpm/60; % beats be second                                 % TODO: this method could be improved
+            bps = bpm/60; % beats be second                                 
             t = obj.type * (1/bps) * 4; % time of note in seconds
             n = t*Fs; % number of samples per note
         end
@@ -74,7 +74,7 @@ classdef Note_Abstract
             
             % generate complex sine wave
             x = 0:(N-1);
-            wav = obj.amplitude * exp(-1j*2*pi*F*x);                        % TODO : should this be negative?
+            wav = obj.amplitude * exp(-1j*2*pi*F*x);                        
         end
     end
     

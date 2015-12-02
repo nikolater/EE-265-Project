@@ -1,6 +1,12 @@
 classdef TremoloEffect < SequenceEffect_Abstract
-    %TREMOLOEFFECT Summary of this class goes here
-    %   Detailed explanation goes here
+%%######################################################################%% 
+%                             TremoloEffect                              %
+%========================================================================%
+% Represents a tremolo effect to be added to the sequence.               %
+%                                                                        %
+% SUPERCLASS: SequenceEffect_Abstract                                    %
+% ########################################################################
+    
     
     properties
         alpha;
