@@ -29,7 +29,7 @@ classdef Note_Abstract
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             
             % calculate the frequency of the key
-            f = (440 * 2 ^ ((obj.tone - 40)/12));                               % TODO: double check that this is the correct formula 
+            f = (440 * 2^((obj.tone - 49)/12));                               % TODO: double check that this is the correct formula 
             
             F = f/Fs; % return the frequency in cycle/sample
 
@@ -50,8 +50,7 @@ classdef Note_Abstract
         % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         
             bps = bpm/60; % beats be second                                 % TODO: this method could be improved
-            tWN = bps*2; % time for whole note TODO: FIX
-            t = obj.type * tWN; % time of note in seconds
+            t = obj.type * (1/bps) * 4; % time of note in seconds
             n = t*Fs; % number of samples per note
         end
         
